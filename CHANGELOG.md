@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 – 2026-09-15
+- Fix: tray menu showed only "Hide widget" (menu actions were garbage-collected). All items are back.
+- Medtrum EasyView verified with a real account.
+
 ## 0.1.2 – 2026-09-15
 - Installer now terminates a running GlucoPop and overwrites it (in-place upgrade), installs per-user (no admin).
 - In-app update check (every 6 h) with one-click silent install from GitHub Releases.

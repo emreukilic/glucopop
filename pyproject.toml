@@ -1,6 +1,6 @@
 [project]
 name = "glucopop"
-version = "0.1.2"
+version = "0.1.3"
 description = "Free, open-source always-on-top CGM glucose widget for Windows"
 readme = "README.md"
 license = {text = "MIT"}

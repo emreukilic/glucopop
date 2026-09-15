@@ -122,27 +122,37 @@ class GlucoPopApp:
 
     # ------------------------------------------------------------------ menu
     def _build_menu(self) -> None:
+        # NOTE: every QAction must be parented to the menu, otherwise Python garbage-collects it
+        # and Qt silently drops it from the menu (only the one kept in self.act_toggle survived).
         self.menu = QMenu()
-        hdr = QAction("GlucoPop · " + tr("credit")); hdr.setEnabled(False); self.menu.addAction(hdr); self.menu.addSeparator()
-        self.act_toggle = QAction(tr("m_hide")); self.act_toggle.triggered.connect(self.toggle_widget)
-        self.menu.addAction(self.act_toggle)
-        a = QAction(tr("m_refresh")); a.triggered.connect(self.refresh_now); self.menu.addAction(a)
+        m = self.menu
+
+        def add(text, slot=None, enabled=True):
+            act = QAction(text, m)
+            if slot:
+                act.triggered.connect(slot)
+            act.setEnabled(enabled)
+            m.addAction(act)
+            return act
+
+        add("GlucoPop · " + tr("credit"), enabled=False)
+        m.addSeparator()
+        self.act_toggle = add(tr("m_hide"), self.toggle_widget)
+        add(tr("m_refresh"), self.refresh_now)
         src_name = sources.SOURCES[self.cfg["source"]].name if self.cfg.get("source") in sources.SOURCES else "…"
-        a = QAction(tr("m_open", site=src_name)); a.triggered.connect(self.open_site); self.menu.addAction(a)
-        self.menu.addSeparator()
-        a = QAction(tr("m_settings")); a.triggered.connect(self.open_settings); self.menu.addAction(a)
-        a = QAction(tr("m_setup")); a.triggered.connect(self.rerun_setup); self.menu.addAction(a)
-        a = QAction(tr("m_logout")); a.triggered.connect(self.logout); self.menu.addAction(a)
-        self.menu.addSeparator()
+        add(tr("m_open", site=src_name), self.open_site)
+        m.addSeparator()
+        add(tr("m_settings"), self.open_settings)
+        add(tr("m_setup"), self.rerun_setup)
+        add(tr("m_logout"), self.logout)
+        m.addSeparator()
         if self.update:
-            a = QAction("⬆ " + tr("m_update", ver="v" + self.update.version)); a.triggered.connect(self.install_update)
-            self.menu.addAction(a)
+            add("⬆ " + tr("m_update", ver="v" + self.update.version), self.install_update)
         else:
-            a = QAction(tr("m_check_update")); a.triggered.connect(lambda: self.check_updates(manual=True)); self.menu.addAction(a)
-        a = QAction(tr("m_about")); a.triggered.connect(self.about); self.menu.addAction(a)
-        a = QAction(tr("m_quit")); a.triggered.connect(self.quit); self.menu.addAction(a)
-        self.tray.setContextMenu(self.menu)
-        self._keep = [self.menu]  # prevent GC of actions
+            add(tr("m_check_update"), lambda: self.check_updates(manual=True))
+        add(tr("m_about"), self.about)
+        add(tr("m_quit"), self.quit)
+        self.tray.setContextMenu(m)
 
     def _tray_activated(self, reason) -> None:
         if reason in (QSystemTrayIcon.ActivationReason.Trigger, QSystemTrayIcon.ActivationReason.DoubleClick):
