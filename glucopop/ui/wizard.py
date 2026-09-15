@@ -59,8 +59,9 @@ class SetupWizard(QDialog):
         self.next_btn.clicked.connect(self.go_next)
         self.cancel_btn.clicked.connect(self.reject)
         self.next_btn.setDefault(True)
+        self.credit = QLabel(); self.credit.setStyleSheet("color: palette(mid); font-size: 11px;")
         nav = QHBoxLayout()
-        nav.addWidget(self.cancel_btn); nav.addStretch(1); nav.addWidget(self.back_btn); nav.addWidget(self.next_btn)
+        nav.addWidget(self.cancel_btn); nav.addSpacing(12); nav.addWidget(self.credit); nav.addStretch(1); nav.addWidget(self.back_btn); nav.addWidget(self.next_btn)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(28, 24, 28, 20)
@@ -139,6 +140,7 @@ class SetupWizard(QDialog):
         self.lang_label.setText(tr("wz_language") + ":")
         self.done_text.setText(tr("wz_done_text"))
         self.back_btn.setText(tr("back")); self.cancel_btn.setText(tr("cancel"))
+        self.credit.setText(tr("credit"))
         self.cred.test_btn.setText(tr("wz_test"))
         self._refresh_nav()
 

@@ -11,6 +11,8 @@ from typing import Any
 APP_NAME = "GlucoPop"
 VERSION = "0.1.0"
 REPO = "emreukilic/glucopop"
+AUTHOR = "Emre Kılıç"
+BRAND = "TypeHealthy"
 
 SECRET_KEYS = ("password", "secret")
 

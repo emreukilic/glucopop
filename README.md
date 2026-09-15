@@ -1,6 +1,7 @@
 <p align="center"><img src="assets/glucopop.png" width="96" alt="GlucoPop"></p>
 <h1 align="center">GlucoPop</h1>
 <p align="center"><b>Şekerin, her zaman gözünün önünde.</b> · <i>Your glucose, always on top.</i></p>
+<p align="center"><b>Emre Kılıç</b> tarafından yapıldı · bir <b>TypeHealthy</b> projesi</p>
 <p align="center">Ücretsiz, açık kaynak Windows widget'ı: CGM (sürekli glikoz sensörü) değerini masaüstünde her zaman üstte duran küçük bir pencerede gösterir, aralık dışına çıkınca renk değiştirir ve bildirim verir.</p>
 
 ---
@@ -61,4 +62,4 @@ GitHub'a `v*` etiketi atıldığında Actions otomatik olarak exe'yi derler ve R
 ### Credits
 Endpoint knowledge comes from the community: [pydexcom](https://github.com/gagebenne/pydexcom), [libre-link-unofficial-api](https://github.com/DRFR0ST/libre-link-unofficial-api), [sapk/medtrum-easyview](https://github.com/sapk/medtrum-easyview), [nl-ruud/nightscout-easyview](https://github.com/nl-ruud/nightscout-easyview), [Nightscout](https://nightscout.github.io/).
 
-License: MIT
+Made by **Emre Kılıç** · a **TypeHealthy** project · License: MIT

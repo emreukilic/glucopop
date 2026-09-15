@@ -117,6 +117,7 @@ class GlucoPopApp:
     # ------------------------------------------------------------------ menu
     def _build_menu(self) -> None:
         self.menu = QMenu()
+        hdr = QAction("GlucoPop · " + tr("credit")); hdr.setEnabled(False); self.menu.addAction(hdr); self.menu.addSeparator()
         self.act_toggle = QAction(tr("m_hide")); self.act_toggle.triggered.connect(self.toggle_widget)
         self.menu.addAction(self.act_toggle)
         a = QAction(tr("m_refresh")); a.triggered.connect(self.refresh_now); self.menu.addAction(a)
