@@ -52,11 +52,17 @@ class MedtrumEasyView(Source):
                 "User-Agent": "okhttp/3.5.0",
             })
         else:
+            # Look like the EasyView v3 web app – the server stalls non-browser requests.
             self.session.headers.update({
                 "AppTag": "v=3.0.2(15);n=eyvw",
-                "Accept": "application/json",
+                "Accept": "application/json, text/plain, */*",
+                "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
                 "Content-Type": "application/json",
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) GlucoPop",
+                "Origin": self.base,
+                "Referer": self.base + "/v3/",
+                "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                               "(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"),
+                "X-Requested-With": "XMLHttpRequest",
             })
         self.uid: str | None = None
         self.realname = ""
@@ -66,7 +72,7 @@ class MedtrumEasyView(Source):
     def _p_login(self) -> None:
         r = self.session.post(self.base + "/v3/api/v2.0/login",
                               json={"user_name": self.cfg["username"], "password": self.cfg["password"],
-                                    "user_type": "P"}, timeout=20)
+                                    "user_type": "P"}, timeout=40)
         if r.status_code in (401, 403):
             raise AuthError("invalid_credentials")
         r.raise_for_status()
@@ -81,7 +87,7 @@ class MedtrumEasyView(Source):
         s = now.replace(hour=0, minute=0, second=0, microsecond=0)
         e = s.replace(hour=23, minute=59, second=59)
         param = base64.b64encode(json.dumps({"ts": [int(s.timestamp()), int(e.timestamp())], "tz": 0}).encode()).decode()
-        r = self.session.get(f"{self.base}/api/v2.1/monitor/{self.uid}/status", params={"param": param}, timeout=20)
+        r = self.session.get(f"{self.base}/api/v2.1/monitor/{self.uid}/status", params={"param": param}, timeout=40)
         if r.status_code in (401, 403):
             raise _SessionExpired()
         r.raise_for_status()
