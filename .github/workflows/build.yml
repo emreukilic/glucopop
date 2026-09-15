@@ -27,13 +27,20 @@ jobs:
         run: python assets/make_icon.py
       - name: Build
         run: pyinstaller --noconfirm --clean --distpath dist --workpath build/work build/glucopop.spec
+      - name: Installer (Inno Setup)
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" build\installer.iss
       - uses: actions/upload-artifact@v4
         with:
           name: GlucoPop-windows
-          path: dist/GlucoPop.exe
+          path: |
+            dist/GlucoPop.exe
+            dist/GlucoPop-Setup-*.exe
       - name: Release (on tag)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/GlucoPop.exe
+          files: |
+            dist/GlucoPop-Setup-*.exe
+            dist/GlucoPop.exe
           generate_release_notes: true

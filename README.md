@@ -21,8 +21,8 @@
 
 ### Kurulum (kullanıcı)
 
-1. [Releases](../../releases) sayfasından **GlucoPop.exe** indir. Kurulum yok, tek dosya.
-2. Çalıştır. Windows SmartScreen uyarısı çıkarsa *Ek bilgi → Yine de çalıştır* (uygulama imzasız; kod açık, isteyen kendi derleyebilir).
+1. [Releases](../../releases) sayfasından **GlucoPop-Setup-x.y.z.exe** indir ve çalıştır (İleri → İleri; "Windows ile başlat" ve masaüstü kısayolu seçenekleri kurulumda sorulur). Kurulum istemeyenler için tek dosyalık **GlucoPop.exe** (taşınabilir) de var.
+2. Windows SmartScreen uyarısı çıkarsa *Ek bilgi → Yine de çalıştır* (uygulama imzasız; kod açık, isteyen kendi derleyebilir).
 3. Sihirbaz: **Dil → Sensör → Giriş (Bağlantıyı test et) → Widget ayarları → Bitir.**
 4. Widget sağ üstte belirir; sürükle, sağ tıkla. Sistem tepsisindeki damla ikonundan ayarlar / gizle / çıkış.
 
@@ -31,14 +31,14 @@ Ayarlar `%APPDATA%\GlucoPop\config.json` içinde; şifreler Windows Kimlik Bilgi
 ### Kaynaktan çalıştırma / geliştirme
 
 ```bat
-git clone https://github.com/<kullanici>/glucopop.git
+git clone https://github.com/emreukilic/glucopop.git
 cd glucopop
 dev.bat            REM sanal ortam kurar, uygulamayı kaynaktan başlatır
 dev.bat check      REM kayıtlı ayarlarla terminalde bağlantı testi
-build\build.bat    REM dist\GlucoPop.exe üretir (PyInstaller)
+build\build.bat    REM dist\GlucoPop.exe + dist\GlucoPop-Setup-x.y.z.exe üretir (PyInstaller + Inno Setup 6)
 ```
 
-GitHub'a `v*` etiketi atıldığında Actions otomatik olarak exe'yi derler ve Release'e ekler.
+GitHub'a `v*` etiketi atıldığında Actions otomatik olarak hem kurulum dosyasını hem taşınabilir exe'yi derler ve Release'e ekler.
 
 ### Önemli
 
@@ -53,7 +53,7 @@ GitHub'a `v*` etiketi atıldığında Actions otomatik olarak exe'yi derler ve R
 
 **Sources:** Dexcom Share (G6/G7/ONE), LibreLinkUp (Libre 2/3), Medtrum EasyView (patient or EasyFollow account), and Nightscout / xDrip+ web service as a universal bridge for everything else (Guardian, LinX/AiDEX, Sibionics, CareSens…).
 
-**Install:** download `GlucoPop.exe` from Releases, run it, follow the wizard (language → sensor → sign-in with *Test connection* → widget settings). Settings live in `%APPDATA%\GlucoPop`, passwords in Windows Credential Manager.
+**Install:** download `GlucoPop-Setup-x.y.z.exe` from Releases (or the portable `GlucoPop.exe`), run it, follow the wizard (language → sensor → sign-in with *Test connection* → widget settings). Settings live in `%APPDATA%\GlucoPop`, passwords in Windows Credential Manager.
 
 **Develop:** `dev.bat` runs from source, `dev.bat check` tests the saved connection in a terminal, `build\build.bat` produces `dist\GlucoPop.exe`. Tagging `v*` builds and publishes the exe via GitHub Actions.
 
