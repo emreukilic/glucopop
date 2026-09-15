@@ -1,0 +1,19 @@
+[project]
+name = "glucopop"
+version = "0.1.0"
+description = "Free, open-source always-on-top CGM glucose widget for Windows"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = ["PySide6>=6.6", "requests>=2.31", "keyring>=24.0"]
+
+[project.scripts]
+glucopop = "glucopop.app:main"
+glucopop-check = "glucopop.check:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["glucopop*"]

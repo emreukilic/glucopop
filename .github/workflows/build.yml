@@ -1,0 +1,39 @@
+name: Build Windows exe
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-build.txt
+      - name: Smoke test (offscreen)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -c "import glucopop, glucopop.app, glucopop.sources; print('import ok', glucopop.__version__)"
+      - name: Icon
+        run: python assets/make_icon.py
+      - name: Build
+        run: pyinstaller --noconfirm --clean --distpath dist --workpath build/work build/glucopop.spec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GlucoPop-windows
+          path: dist/GlucoPop.exe
+      - name: Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/GlucoPop.exe
+          generate_release_notes: true
