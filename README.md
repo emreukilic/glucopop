@@ -40,6 +40,10 @@ build\build.bat    REM dist\GlucoPop.exe + dist\GlucoPop-Setup-x.y.z.exe üretir
 
 GitHub'a `v*` etiketi atıldığında Actions otomatik olarak hem kurulum dosyasını hem taşınabilir exe'yi derler ve Release'e ekler.
 
+### Test edenler aranıyor 🙏
+
+Geliştirici Medtrum kullanıyor; **Dexcom**, **Libre** ve **Nightscout** kaynakları gerçek API cevap örnekleriyle otomatik testlerden geçti ama henüz gerçek hesapla denenmedi. Bu sensörlerden birini kullanıyorsan: kur, "Bağlantıyı test et" sonucunu (çalıştı / hata metni) [Issues](../../issues) sayfasına yaz. Şifre paylaşma; hata metni yeterli.
+
 ### Önemli
 
 * **Tıbbi cihaz değildir.** Değerler resmi uygulamadan gecikmeli gelebilir; tedavi kararından önce mutlaka resmi uygulamayı/cihazı kontrol et.

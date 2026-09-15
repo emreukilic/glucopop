@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QMenu, Q
                                QVBoxLayout)
 
 from . import i18n, sources
-from .config import REPO, VERSION, Config, set_autostart
+from .config import REPO, SECRET_KEYS, VERSION, Config, delete_secret, set_autostart
 from .core import AlertEngine, Poller
 from .i18n import age_text, tr
 from .sources import Reading
@@ -126,6 +126,7 @@ class GlucoPopApp:
         self.menu.addSeparator()
         a = QAction(tr("m_settings")); a.triggered.connect(self.open_settings); self.menu.addAction(a)
         a = QAction(tr("m_setup")); a.triggered.connect(self.rerun_setup); self.menu.addAction(a)
+        a = QAction(tr("m_logout")); a.triggered.connect(self.logout); self.menu.addAction(a)
         self.menu.addSeparator()
         a = QAction(tr("m_about")); a.triggered.connect(self.about); self.menu.addAction(a)
         a = QAction(tr("m_quit")); a.triggered.connect(self.quit); self.menu.addAction(a)
@@ -183,6 +184,26 @@ class GlucoPopApp:
                 self.widget.apply_config()
             self.last_reading = None
             self._start_poller()
+
+    def logout(self) -> None:
+        if QMessageBox.question(None, "GlucoPop", tr("logout_confirm")) != QMessageBox.StandardButton.Yes:
+            return
+        self._stop_poller()
+        src = self.cfg.get("source")
+        if src:
+            for k in SECRET_KEYS:
+                delete_secret(src, k)
+        self.cfg.update(source="", source_cfg={}, setup_done=False)
+        self.cfg.save()
+        self.last_reading = None
+        if self.widget:
+            self.widget.reading = None
+            self.widget.hide()
+        if self.run_wizard(first_run=True):
+            self._start_widget()
+            self._start_poller()
+        else:
+            self.quit()
 
     def about(self) -> None:
         QMessageBox.information(None, "GlucoPop", tr("about_text", ver=VERSION, repo=REPO))
