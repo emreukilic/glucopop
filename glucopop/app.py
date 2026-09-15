@@ -18,6 +18,7 @@ from .sources import Reading
 from .ui.forms import SettingsForm
 from .ui.widget import STATE_COLORS, GlucoseWidget
 from .ui.wizard import SetupWizard
+from .updater import Update, UpdateCheck, UpdateInstall
 
 
 def make_icon(text: str, color: QColor) -> QIcon:
@@ -54,6 +55,8 @@ class GlucoPopApp:
         self.widget: GlucoseWidget | None = None
         self.poller: Poller | None = None
         self.alerts = AlertEngine(self.cfg)
+        self.update: Update | None = None
+        self._upd_thread = None
         self.tray = QSystemTrayIcon(make_icon("--", STATE_COLORS["connecting"]))
         self.tray.setToolTip("GlucoPop")
         self.tray.activated.connect(self._tray_activated)
@@ -72,6 +75,9 @@ class GlucoPopApp:
                 return
         self._start_widget()
         self._start_poller()
+        QTimer.singleShot(20_000, self.check_updates)          # once shortly after start
+        self._upd_timer = QTimer(); self._upd_timer.timeout.connect(self.check_updates)
+        self._upd_timer.start(6 * 3600 * 1000)                 # then every 6 h
 
     def run_wizard(self, first_run: bool) -> bool:
         wz = SetupWizard(self.cfg, first_run=first_run)
@@ -128,6 +134,11 @@ class GlucoPopApp:
         a = QAction(tr("m_setup")); a.triggered.connect(self.rerun_setup); self.menu.addAction(a)
         a = QAction(tr("m_logout")); a.triggered.connect(self.logout); self.menu.addAction(a)
         self.menu.addSeparator()
+        if self.update:
+            a = QAction("⬆ " + tr("m_update", ver="v" + self.update.version)); a.triggered.connect(self.install_update)
+            self.menu.addAction(a)
+        else:
+            a = QAction(tr("m_check_update")); a.triggered.connect(lambda: self.check_updates(manual=True)); self.menu.addAction(a)
         a = QAction(tr("m_about")); a.triggered.connect(self.about); self.menu.addAction(a)
         a = QAction(tr("m_quit")); a.triggered.connect(self.quit); self.menu.addAction(a)
         self.tray.setContextMenu(self.menu)
@@ -204,6 +215,43 @@ class GlucoPopApp:
             self._start_poller()
         else:
             self.quit()
+
+    # ------------------------------------------------------------------ updates
+    def check_updates(self, manual: bool = False) -> None:
+        if self._upd_thread and self._upd_thread.isRunning():
+            return
+        self._upd_thread = UpdateCheck()
+        self._upd_thread.found.connect(self._on_update_found)
+        if manual:
+            self._upd_thread.finished.connect(lambda: self._after_manual_check())
+        self._upd_thread.start()
+
+    def _after_manual_check(self) -> None:
+        if not self.update:
+            QMessageBox.information(None, "GlucoPop", tr("upd_none", ver=VERSION))
+
+    def _on_update_found(self, upd: Update) -> None:
+        first = self.update is None or self.update.version != upd.version
+        self.update = upd
+        self._build_menu()
+        if first:
+            self.tray.showMessage(tr("n_update_title", ver="v" + upd.version), tr("n_update_body", ver="v" + upd.version),
+                                  QSystemTrayIcon.MessageIcon.Information, 10000)
+
+    def install_update(self) -> None:
+        upd = self.update
+        if not upd:
+            return
+        if not upd.asset_url or sys.platform != "win32" or not getattr(sys, "frozen", False):
+            webbrowser.open(upd.url)
+            return
+        if QMessageBox.question(None, "GlucoPop", tr("upd_confirm", ver="v" + upd.version)) != QMessageBox.StandardButton.Yes:
+            return
+        self._installer = UpdateInstall(upd)
+        self._installer.progress.connect(lambda p: self.tray.setToolTip(tr("upd_downloading", p=p)))
+        self._installer.failed.connect(lambda e: QMessageBox.warning(None, "GlucoPop", tr("upd_failed", err=e)))
+        self._installer.started_install.connect(self.quit)
+        self._installer.start()
 
     def about(self) -> None:
         QMessageBox.information(None, "GlucoPop", tr("about_text", ver=VERSION, repo=REPO))

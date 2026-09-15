@@ -16,11 +16,11 @@ AppPublisher={#AppPublisher}
 AppPublisherURL={#AppURL}
 AppSupportURL={#AppURL}/issues
 AppUpdatesURL={#AppURL}/releases
-DefaultDirName={autopf}\{#AppName}
+DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
+DisableDirPage=auto
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=..\dist
 OutputBaseFilename=GlucoPop-Setup-{#AppVersion}
 SetupIconFile=..\assets\glucopop.ico
@@ -29,7 +29,8 @@ Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
-CloseApplications=yes
+CloseApplications=force
+RestartApplications=no
 LicenseFile=..\LICENSE
 
 [Languages]
@@ -64,3 +65,35 @@ Filename: "{app}\{#AppExe}"; Description: "{cm:Launch}"; Flags: nowait postinsta
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\{#AppName}"
+
+[Code]
+// GlucoPop lives in the tray with no visible window, so Windows' Restart Manager cannot
+// close it politely. Terminate it ourselves before (un)installing; the app restarts after install.
+procedure KillApp;
+var
+  ResultCode: Integer;
+begin
+  Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /IM {#AppExe} /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(800);
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  KillApp;
+  Result := '';
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+  KillApp;
+  Result := True;
+end;
+
+// Silent self-update: GlucoPop runs the installer with /SILENT /RESTARTAPP; relaunch afterwards.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if (CurStep = ssPostInstall) and WizardSilent() and (ExpandConstant('{param:RESTARTAPP|0}') = '1') then
+    Exec(ExpandConstant('{app}\{#AppExe}'), '', '', SW_SHOWNORMAL, ewNoWait, ResultCode);
+end;
