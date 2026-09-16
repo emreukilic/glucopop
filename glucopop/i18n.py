@@ -79,6 +79,7 @@ STRINGS: dict[str, dict[str, str]] = {
         # errors
         "e_auth": "Sign-in rejected. Check username/password.",
         "e_net": "Network error: {err}",
+        "e_ssl": "Secure connection failed (SSL). On a company network the IT proxy may be intercepting HTTPS – GlucoPop uses the Windows certificate store, so restarting after this update usually fixes it; otherwise ask IT to allow the sensor's server.",
         "e_no_data": "Signed in, but no sensor data was returned (sensor warming up, not sharing, or no follower set up).",
         "e_llu_terms": "LibreLinkUp asks you to accept new terms. Open the LibreLinkUp app once, accept, then retry.",
         "e_libre_no_connection": "This LibreLinkUp account follows nobody. Invite yourself from the Libre app first.",
@@ -153,6 +154,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "upd_failed": "Güncelleme başarısız: {err}\nReleases sayfasından elle indirebilirsin.", "upd_none": "En güncel sürümü kullanıyorsun ({ver}).",
         "e_auth": "Giriş reddedildi. Kullanıcı adı/şifreyi kontrol et.",
         "e_net": "Ağ hatası: {err}",
+        "e_ssl": "Güvenli bağlantı kurulamadı (SSL). Şirket ağında IT güvenlik cihazı HTTPS trafiğini araya girip inceliyor olabilir – GlucoPop Windows sertifika deposunu kullanır, bu güncellemeden sonra yeniden başlatmak genelde çözer; çözmezse IT'den sensör sunucusuna izin isteyin.",
         "e_no_data": "Giriş yapıldı ama sensör verisi gelmedi (sensör ısınıyor, paylaşım kapalı ya da takipçi ayarlanmamış olabilir).",
         "e_llu_terms": "LibreLinkUp yeni koşulları kabul etmeni istiyor. LibreLinkUp uygulamasını bir kez aç, kabul et, sonra tekrar dene.",
         "e_libre_no_connection": "Bu LibreLinkUp hesabı kimseyi takip etmiyor. Önce Libre uygulamasından kendini davet et.",

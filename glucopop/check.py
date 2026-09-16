@@ -7,6 +7,10 @@ from . import sources
 
 
 def main() -> int:
+    try:
+        import truststore; truststore.inject_into_ssl()
+    except Exception:
+        pass
     cfg = Config()
     if not cfg["source"]:
         print("No source configured yet. Run GlucoPop once and complete the setup wizard.")

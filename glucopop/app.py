@@ -330,7 +330,17 @@ def _beep(state: str) -> None:
     QApplication.beep()
 
 
+def _use_os_trust_store() -> None:
+    """Trust the Windows/macOS certificate store, so corporate TLS-inspection proxies work."""
+    try:
+        import truststore  # type: ignore
+        truststore.inject_into_ssl()
+    except Exception:
+        pass
+
+
 def main() -> int:
+    _use_os_trust_store()
     QApplication.setApplicationName("GlucoPop")
     QApplication.setOrganizationName("GlucoPop")
     QApplication.setQuitOnLastWindowClosed(False)

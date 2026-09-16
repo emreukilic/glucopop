@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.4 – 2026-09-16
+- Corporate networks: use the Windows certificate store (truststore) so TLS-inspection proxies no longer cause SSL errors; clearer SSL error message.
+
 ## 0.1.3 – 2026-09-15
 - Fix: tray menu showed only "Hide widget" (menu actions were garbage-collected). All items are back.
 - Medtrum EasyView verified with a real account.

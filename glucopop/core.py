@@ -26,6 +26,8 @@ def error_text(err: BaseException) -> str:
         key = {"no_data": "e_no_data", "libre_no_connection": "e_libre_no_connection",
                "medtrum_no_follow": "e_medtrum_no_follow", "rate_limited": "e_rate_limited"}.get(msg)
         return tr(key) if key else msg
+    if isinstance(err, requests.exceptions.SSLError):
+        return tr("e_ssl")
     if isinstance(err, requests.RequestException):
         return tr("e_net", err=type(err).__name__)
     return f"{type(err).__name__}: {err}"
