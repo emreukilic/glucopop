@@ -36,6 +36,13 @@ jobs:
       - name: Installer (Inno Setup)
         run: |
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" build\installer.iss
+      # A copy under a fixed name, so typehealthy.com can link straight at
+      # releases/latest/download/GlucoPop-Setup.exe instead of sending people to the
+      # releases page to hunt for the right file. The versioned file is still published.
+      - name: Stable download name
+        run: |
+          $setup = Get-ChildItem dist\GlucoPop-Setup-*.exe | Select-Object -First 1
+          Copy-Item $setup.FullName dist\GlucoPop-Setup.exe
       - uses: actions/upload-artifact@v4
         with:
           name: GlucoPop-windows
@@ -48,5 +55,6 @@ jobs:
         with:
           files: |
             dist/GlucoPop-Setup-*.exe
+            dist/GlucoPop-Setup.exe
             dist/GlucoPop.exe
           generate_release_notes: true
