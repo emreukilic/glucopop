@@ -2,7 +2,7 @@
 ; Build: ISCC.exe build\installer.iss   (after PyInstaller produced dist\GlucoPop.exe)
 
 #define AppName "GlucoPop"
-#define AppVersion "0.1.4"
+#define AppVersion "0.2.0"
 #define AppPublisher "Emre Kılıç · TypeHealthy"
 #define AppURL "https://github.com/emreukilic/glucopop"
 #define AppExe "GlucoPop.exe"
