@@ -106,9 +106,17 @@ class Source:
 
     @staticmethod
     def _mgdl_from_any(value: float, unit_hint: str = "") -> float:
-        """Accept mmol or mg/dL by magnitude if unit is unknown."""
+        """Convert to mg/dL when the unit is known.
+
+        The magnitude fallback this used to have — under 35, assume mmol — is gone, because
+        guessing per value is wrong in the one place it must not be: a genuine severe hypo
+        reported in mg/dL is under 35, and multiplying it by 18 turns the most dangerous reading
+        of someone's day into an extreme high. Nothing in the app calls this without a unit
+        today; if something ever needs to, the unit has to come from the response, not from how
+        big the number happens to be.
+        """
         if unit_hint == "mmol/L":
             return float(value) * MMOL_TO_MGDL
         if unit_hint == "mg/dL":
             return float(value)
-        return float(value) * MMOL_TO_MGDL if float(value) < 35 else float(value)
+        raise SourceError("bad_response", "glucose unit not reported; refusing to guess")

@@ -8,3 +8,6 @@ dist/
 venv/
 config.json
 *.log
+
+# Taslak ve artık dosyalar: repoya girmesin.
+_to_delete/

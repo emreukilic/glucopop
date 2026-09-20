@@ -11,6 +11,7 @@ from PySide6.QtCore import QObject, QThread, Signal
 
 from . import sources
 from .i18n import tr
+from .alerts import AlertEngine  # re-exported: app.py imports it from here
 from .sources import AuthError, Reading, SourceError
 
 
@@ -94,47 +95,4 @@ class Poller(QThread):
                 self.msleep(250)
 
 
-class AlertEngine:
-    """Decides when to notify. Pure logic, no Qt."""
-
-    def __init__(self, cfg) -> None:
-        self.cfg = cfg
-        self._last_state = "ok"
-        self._last_notify = 0.0
-        self._last_stale_notify = 0.0
-
-    def classify(self, r: Reading) -> str:
-        mg = r.mgdl
-        if r.age_seconds > int(self.cfg["stale_minutes"]) * 60:
-            return "stale"
-        if mg < float(self.cfg["urgent_low"]):
-            return "urgent_low"
-        if mg < float(self.cfg["low"]):
-            return "low"
-        if mg > float(self.cfg["high"]):
-            return "high"
-        return "ok"
-
-    def should_notify(self, state: str) -> bool:
-        if not self.cfg["notify"]:
-            self._last_state = state
-            return False
-        now = time.time()
-        repeat = float(self.cfg["repeat_minutes"]) * 60
-        if state == "ok":
-            self._last_state = state
-            return False
-        if state == "stale":
-            fire = now - self._last_stale_notify > max(repeat, 600)
-            if fire:
-                self._last_stale_notify = now
-            self._last_state = state
-            return fire
-        changed = state != self._last_state
-        # urgent low: repeat faster
-        rep = min(repeat, 300) if state == "urgent_low" else repeat
-        fire = changed or (now - self._last_notify > rep)
-        if fire:
-            self._last_notify = now
-        self._last_state = state
-        return fire
+__all__ = ["AlertEngine", "Poller", "error_text"]

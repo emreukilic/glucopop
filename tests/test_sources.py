@@ -216,3 +216,58 @@ def test_nightscout_unauthorized():
     src.session = FakeSession({("GET", "/api/v1/entries/sgv.json"): FakeResp("Unauthorized", 401, raw=True)})
     with pytest.raises(AuthError):
         src.latest()
+
+
+# --------------------------------------------------------------- plausibility gate
+
+def test_create_wraps_latest_so_nothing_bypasses_the_gate():
+    """The gate is only worth having if every adapter goes through it."""
+    from glucopop.sources import SOURCES, create
+    for sid, cls in SOURCES.items():
+        src = create(sid, {})
+        assert src.latest is not cls.latest, f"{sid}: latest() is not guarded"
+
+
+def test_warming_sensor_is_not_a_hypo():
+    """Medtrum reports a sensor still warming up as glucose: 0, not null.
+
+    Zero is below every low threshold, so before this gate existed a brand new sensor reached the
+    widget as a reading of 0 mg/dL and `classify` called it urgent_low — a hypo alarm, repeating
+    on the fast five-minute schedule, for a sensor that had not started. Observed in the field.
+    """
+    from glucopop.sources import SourceError, _checked
+    from glucopop.sources.base import Reading
+    with pytest.raises(SourceError):
+        _checked(Reading(mgdl=0.0, timestamp=time.time()))
+
+
+@pytest.mark.parametrize("mgdl", [0.0, 10.0, -5.0, float("nan"), float("inf"), 1500.0])
+def test_implausible_values_are_refused(mgdl):
+    from glucopop.sources import SourceError
+    from glucopop.sources import _checked
+    from glucopop.sources.base import Reading
+    with pytest.raises(SourceError):
+        _checked(Reading(mgdl=mgdl, timestamp=time.time()))
+
+
+@pytest.mark.parametrize("ts", [0.0, -1.0, float("nan")])
+def test_implausible_times_are_refused(ts):
+    from glucopop.sources import SourceError, _checked
+    from glucopop.sources.base import Reading
+    with pytest.raises(SourceError):
+        _checked(Reading(mgdl=120.0, timestamp=ts))
+
+
+def test_a_reading_from_the_future_is_refused():
+    """It would never go stale, so the staleness guard would stop working for good."""
+    from glucopop.sources import SourceError, _checked
+    from glucopop.sources.base import Reading
+    with pytest.raises(SourceError):
+        _checked(Reading(mgdl=120.0, timestamp=time.time() + 3600))
+
+
+def test_an_ordinary_reading_still_passes():
+    from glucopop.sources import _checked
+    from glucopop.sources.base import Reading
+    r = Reading(mgdl=108.0, timestamp=time.time() - 60)
+    assert _checked(r) is r

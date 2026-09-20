@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 APP_NAME = "GlucoPop"
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 REPO = "emreukilic/glucopop"
 AUTHOR = "Emre Kılıç"
 BRAND = "TypeHealthy"
