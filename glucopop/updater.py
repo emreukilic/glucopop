@@ -1,4 +1,11 @@
-"""Checks GitHub Releases for a newer version; downloads the installer and runs it silently."""
+"""Checks GitHub Releases for a newer version, and installs it where that can be done safely.
+
+On Windows the installer is silent: it closes the app, writes over it and starts the new one.
+On macOS it is not. Replacing a running .app from inside itself breaks the code signature
+Gatekeeper checked on launch, and an app that quietly rewrites a signed bundle is the shape
+of thing macOS is right to distrust. So the Mac build downloads the disk image, opens it, and
+lets the person drag the new version over the old one — two seconds of their attention in
+exchange for a signature that still means something."""
 
 from __future__ import annotations
 
@@ -36,10 +43,12 @@ def check() -> Update | None:
     tag = str(d.get("tag_name", "")).lstrip("v")
     if not tag or _ver_tuple(tag) <= _ver_tuple(VERSION):
         return None
+    want = ".dmg" if sys.platform == "darwin" else ".exe"
     asset = ""
     for a in d.get("assets", []):
-        name = a.get("name", "")
-        if name.lower().startswith("glucopop-setup") and name.lower().endswith(".exe"):
+        name = a.get("name", "").lower()
+        if name.startswith("glucopop") and name.endswith(want):
+            # the fixed-name copy is the one the website links to; either will do here
             asset = a.get("browser_download_url", "")
             break
     return Update(tag, d.get("html_url", f"https://github.com/{REPO}/releases/latest"), asset, d.get("body", "") or "")
@@ -61,6 +70,7 @@ class UpdateInstall(QThread):
     progress = Signal(int)   # percent
     failed = Signal(str)
     started_install = Signal()
+    opened_image = Signal()   # macOS: the disk image is on screen, we are not quitting
 
     def __init__(self, upd: Update):
         super().__init__()
@@ -68,7 +78,8 @@ class UpdateInstall(QThread):
 
     def run(self) -> None:
         try:
-            path = os.path.join(tempfile.gettempdir(), f"GlucoPop-Setup-{self.upd.version}.exe")
+            ext = ".dmg" if sys.platform == "darwin" else ".exe"
+            path = os.path.join(tempfile.gettempdir(), f"GlucoPop-{self.upd.version}{ext}")
             with requests.get(self.upd.asset_url, stream=True, timeout=60, headers={"User-Agent": "GlucoPop"}) as r:
                 r.raise_for_status()
                 total = int(r.headers.get("content-length") or 0)
@@ -79,6 +90,12 @@ class UpdateInstall(QThread):
                         done += len(chunk)
                         if total:
                             self.progress.emit(int(done * 100 / total))
+            if sys.platform == "darwin":
+                # opens the disk image in Finder; the person drags GlucoPop across, as they did
+                # the first time. Nothing is replaced behind their back.
+                subprocess.Popen(["/usr/bin/open", path], close_fds=True)
+                self.opened_image.emit()
+                return
             # Installer kills us, installs over the old files and relaunches the new version.
             flags = 0
             if sys.platform == "win32":

@@ -335,7 +335,7 @@ class GlucoPopApp:
         upd = self.update
         if not upd:
             return
-        if not upd.asset_url or sys.platform != "win32" or not getattr(sys, "frozen", False):
+        if not upd.asset_url or sys.platform not in ("win32", "darwin") or not getattr(sys, "frozen", False):
             webbrowser.open(upd.url)
             return
         if QMessageBox.question(None, "GlucoPop", tr("upd_confirm", ver="v" + upd.version)) != QMessageBox.StandardButton.Yes:
@@ -344,6 +344,8 @@ class GlucoPopApp:
         self._installer.progress.connect(lambda p: self.tray.setToolTip(tr("upd_downloading", p=p)))
         self._installer.failed.connect(lambda e: QMessageBox.warning(None, "GlucoPop", tr("upd_failed", err=e)))
         self._installer.started_install.connect(self.quit)
+        # on macOS the image just opens: the app keeps running while the person drags it across
+        self._installer.opened_image.connect(lambda: self.tray.setToolTip("GlucoPop"))
         self._installer.start()
 
     def about(self) -> None:

@@ -19,6 +19,7 @@ from typing import Any
 
 APP_NAME = "GlucoPop"
 VERSION = "0.2.1"
+BUNDLE_ID = "com.typehealthy.glucopop"   # macOS bundle and LaunchAgent label
 REPO = "emreukilic/glucopop"
 AUTHOR = "Emre Kılıç"
 BRAND = "TypeHealthy"
@@ -241,27 +242,65 @@ class Config:
         self.data.update(kw)
 
 
-# --------------------------------------------------------------------------- autostart (Windows)
-def set_autostart(enabled: bool) -> None:
-    if sys.platform != "win32":
-        return
-    try:
-        import winreg  # type: ignore
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                             r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
-        if enabled:
-            if getattr(sys, "frozen", False):
-                cmd = f'"{sys.executable}"'
-            else:
-                pyw = Path(sys.executable).with_name("pythonw.exe")
-                exe = pyw if pyw.exists() else Path(sys.executable)
-                cmd = f'"{exe}" -m glucopop'
-            winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, cmd)
+# --------------------------------------------------------------------------- autostart
+LAUNCH_AGENT = Path.home() / "Library" / "LaunchAgents" / f"{BUNDLE_ID}.plist"
+
+
+def _autostart_windows(enabled: bool) -> None:
+    import winreg  # type: ignore
+    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                         r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE)
+    if enabled:
+        if getattr(sys, "frozen", False):
+            cmd = f'"{sys.executable}"'
         else:
-            try:
-                winreg.DeleteValue(key, APP_NAME)
-            except FileNotFoundError:
-                pass
-        winreg.CloseKey(key)
+            pyw = Path(sys.executable).with_name("pythonw.exe")
+            exe = pyw if pyw.exists() else Path(sys.executable)
+            cmd = f'"{exe}" -m glucopop'
+        winreg.SetValueEx(key, APP_NAME, 0, winreg.REG_SZ, cmd)
+    else:
+        try:
+            winreg.DeleteValue(key, APP_NAME)
+        except FileNotFoundError:
+            pass
+    winreg.CloseKey(key)
+
+
+def _autostart_macos(enabled: bool) -> None:
+    """A LaunchAgent, which is how macOS starts something at login without a Dock icon.
+
+    `open -a` rather than the executable inside the bundle: launching the binary directly gives a
+    process macOS does not recognise as the app, so the menu bar item appears under the wrong
+    name and the single-instance check does not see it. RunAtLoad only — no KeepAlive, because a
+    widget the user closed on purpose should stay closed until the next login.
+    """
+    if not enabled:
+        LAUNCH_AGENT.unlink(missing_ok=True)
+        return
+    if getattr(sys, "frozen", False):
+        # …/GlucoPop.app/Contents/MacOS/GlucoPop → …/GlucoPop.app
+        app = Path(sys.executable).parents[2]
+        args = ["/usr/bin/open", "-a", str(app)]
+    else:
+        args = [sys.executable, "-m", "glucopop"]
+    items = "".join(f"<string>{a}</string>" for a in args)
+    LAUNCH_AGENT.parent.mkdir(parents=True, exist_ok=True)
+    LAUNCH_AGENT.write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+        '<plist version="1.0"><dict>'
+        f'<key>Label</key><string>{BUNDLE_ID}</string>'
+        f'<key>ProgramArguments</key><array>{items}</array>'
+        '<key>RunAtLoad</key><true/>'
+        '</dict></plist>\n', encoding="utf-8")
+
+
+def set_autostart(enabled: bool) -> None:
+    """Start with the computer. Best effort: a machine that refuses is not an error worth a dialog."""
+    try:
+        if sys.platform == "win32":
+            _autostart_windows(enabled)
+        elif sys.platform == "darwin":
+            _autostart_macos(enabled)
     except Exception:
         pass

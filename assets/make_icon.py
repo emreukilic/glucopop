@@ -77,9 +77,23 @@ def tile(size: int, bg=WHITE) -> Image.Image:
     return img.resize((size, size), Image.LANCZOS)
 
 
+def iconset(path: Path) -> None:
+    """The .iconset folder macOS builds an .icns from.
+
+    Written as a folder of PNGs rather than an .icns directly, because `iconutil` — which is the
+    only thing that writes a correct .icns — exists solely on macOS, and this script also runs on
+    the Windows builder. The mac job calls iconutil on the folder; everyone else ignores it.
+    """
+    path.mkdir(parents=True, exist_ok=True)
+    for base in (16, 32, 128, 256, 512):
+        tile(base).save(path / f"icon_{base}x{base}.png")
+        tile(base * 2).save(path / f"icon_{base}x{base}@2x.png")
+
+
 if __name__ == "__main__":
     sizes = [16, 24, 32, 48, 64, 128, 256]
     imgs = [tile(z) for z in sizes]
     imgs[-1].save(HERE / "glucopop.png")
     imgs[-1].save(HERE / "glucopop.ico", sizes=[(z, z) for z in sizes], append_images=imgs[:-1])
+    iconset(HERE / "glucopop.iconset")
     print("icon written")

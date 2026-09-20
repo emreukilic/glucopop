@@ -58,3 +58,117 @@ jobs:
             dist/GlucoPop-Setup.exe
             dist/GlucoPop.exe
           generate_release_notes: true
+
+  # ---------------------------------------------------------------------- macOS
+  # Built, signed and notarized on Apple's own runner, because PyInstaller cannot cross-compile
+  # and an unsigned .app is one macOS will not let a normal person open at all: since Sequoia the
+  # right-click-Open trick is gone, and the only way past Gatekeeper is a trip into System
+  # Settings. For a free app aimed at people who are not developers that is the same as broken.
+  #
+  # Without the signing secrets the job still runs and still produces an .app, unsigned — so the
+  # build stays honest on forks and pull requests, and so the pipeline can be proved before the
+  # certificate exists.
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-build.txt
+      - name: Tests (offline, canned API responses)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests
+          python -c "import glucopop, glucopop.app, glucopop.sources; print('import ok', glucopop.__version__)"
+      - name: Icon
+        run: |
+          python assets/make_icon.py
+          iconutil -c icns assets/glucopop.iconset -o assets/glucopop.icns
+      - name: Build
+        run: pyinstaller --noconfirm --clean --distpath dist --workpath build/work build/glucopop.spec
+
+      - name: Signing certificate
+        id: cert
+        env:
+          CERT: ${{ secrets.MACOS_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          if [ -z "$CERT" ]; then echo "have=false" >> $GITHUB_OUTPUT; echo "no certificate: building unsigned"; exit 0; fi
+          echo "$CERT" | base64 --decode > /tmp/cert.p12
+          KEYCHAIN=/tmp/build.keychain
+          security create-keychain -p actions "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p actions "$KEYCHAIN"
+          security import /tmp/cert.p12 -k "$KEYCHAIN" -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm -f /tmp/cert.p12
+          IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)"/\1/')
+          echo "identity=$IDENTITY" >> $GITHUB_OUTPUT
+          echo "have=true" >> $GITHUB_OUTPUT
+          echo "signing as: $IDENTITY"
+
+      - name: Sign
+        if: steps.cert.outputs.have == 'true'
+        env:
+          IDENTITY: ${{ steps.cert.outputs.identity }}
+        run: |
+          # every nested binary first, the bundle last: --deep is deprecated and signs things in
+          # an order Apple no longer accepts
+          find dist/GlucoPop.app -type f \( -name "*.so" -o -name "*.dylib" \) -print0 |
+            xargs -0 -I{} codesign --force --options runtime --timestamp --sign "$IDENTITY" {}
+          find dist/GlucoPop.app/Contents/Frameworks -maxdepth 1 -name "*.framework" -print0 2>/dev/null |
+            xargs -0 -I{} codesign --force --options runtime --timestamp --sign "$IDENTITY" {} || true
+          codesign --force --options runtime --timestamp \
+            --entitlements build/entitlements.plist --sign "$IDENTITY" dist/GlucoPop.app
+          codesign --verify --deep --strict --verbose=2 dist/GlucoPop.app
+
+      - name: Disk image
+        run: |
+          VERSION=$(python -c "import glucopop; print(glucopop.__version__)")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          mkdir -p dmg && cp -R dist/GlucoPop.app dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname "GlucoPop" -srcfolder dmg -ov -format UDZO "dist/GlucoPop-$VERSION.dmg"
+          # the fixed name typehealthy.com links to, so the site never needs editing for a release
+          cp "dist/GlucoPop-$VERSION.dmg" dist/GlucoPop.dmg
+
+      - name: Notarize
+        id: notarize
+        if: steps.cert.outputs.have == 'true' && env.APPLE_ID != ''
+        env:
+          IDENTITY: ${{ steps.cert.outputs.identity }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          codesign --force --sign "$IDENTITY" --timestamp "dist/GlucoPop-$VERSION.dmg"
+          xcrun notarytool submit "dist/GlucoPop-$VERSION.dmg" \
+            --apple-id "$APPLE_ID" --password "$APPLE_APP_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          # stapling puts the ticket inside the image, so it opens on a machine that is offline
+          xcrun stapler staple "dist/GlucoPop-$VERSION.dmg"
+          xcrun stapler validate "dist/GlucoPop-$VERSION.dmg"
+          cp "dist/GlucoPop-$VERSION.dmg" dist/GlucoPop.dmg
+          echo "done=true" >> $GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GlucoPop-macos
+          path: dist/GlucoPop-*.dmg
+
+      # Only a notarized image is ever published. Before the certificate exists a tag still
+      # builds the app and keeps it as an artifact — it just does not reach strangers, who would
+      # meet Gatekeeper and conclude the app is broken.
+      - name: Release (on tag, only when notarized)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.notarize.outputs.done == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/GlucoPop-*.dmg
+            dist/GlucoPop.dmg
+          generate_release_notes: true
