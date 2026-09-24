@@ -402,6 +402,28 @@ def test_a_cancelled_sign_in_leaves_nothing_behind():
     assert vault.saves == []
 
 
+def test_a_renewal_running_while_a_sign_in_is_retired_cannot_write_it_back():
+    vault = MemoryVault({KEY: tokens(expires_at=0)})
+    inside, go = threading.Event(), threading.Event()
+
+    def renew(kw):
+        inside.set()
+        go.wait(2)
+        return Resp(body={"access_token": "acc-2", "refresh_token": "ref-2", "expires_in": 3600})
+
+    th = threading.Thread(target=lambda: token_for(FakeSession([("POST", TOKEN_URL, renew)]), vault, KEY))
+    th.start()
+    assert inside.wait(2)
+    retirer = threading.Thread(target=lambda: carelink.retire(KEY, vault))
+    retirer.start()
+    go.set()
+    th.join(2)
+    retirer.join(2)
+    assert KEY not in vault.store                       # the renewal wrote first, the retirement last
+    with pytest.raises(AuthError):
+        token_for(FakeSession([]), vault, KEY)
+
+
 @pytest.fixture
 def cfg(tmp_path, monkeypatch):
     """A Config on a temporary file, with a dictionary for the Credential Manager."""

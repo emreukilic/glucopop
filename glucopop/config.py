@@ -187,9 +187,8 @@ class Config:
         it goes with the last row that uses it — from memory and from the Credential Manager."""
         if not key or key in self.carelink_keys():
             return
-        from .sources.carelink import KeyringVault, forget_tokens  # local: see carelink_key
-        forget_tokens(key)
-        KeyringVault().forget(key)
+        from .sources.carelink import retire  # local: see carelink_key
+        retire(key)
 
     def person_name(self, p: dict[str, Any]) -> str:
         """What to call someone in the widget: their own name, else whatever the service knows."""

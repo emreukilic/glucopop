@@ -252,6 +252,19 @@ def forget_tokens(key: str) -> None:
         _pending.discard(key)
 
 
+def retire(key: str, vault: Any = None) -> None:
+    """Forgets a sign-in everywhere, memory and vault, under the lock: a renewal running at that
+    moment finishes first, and cannot write the token back afterwards."""
+    vault = vault if vault is not None else KeyringVault()
+    with _lock:
+        _live.pop(key, None)
+        _pending.discard(key)
+        try:
+            vault.forget(key)
+        except Exception:  # noqa: BLE001 — nothing stored, or the vault is unavailable
+            pass
+
+
 def persist_pending(in_use: set[str], vault: Any = None) -> None:
     """The sign-ins a saved person now reads through go to the vault; the rest stay in memory and
     end with the app. Under the lock, so a renewal cannot slip in between and be overwritten by
