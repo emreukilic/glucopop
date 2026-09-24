@@ -1,18 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Hardened runtime is required for notarization, and these two exceptions are required for a
-  Python application to survive it.
+  Hardened runtime is required for notarization, and these exceptions are required for a Python
+  application to survive it.
 
   CPython writes executable pages at run time (ctypes trampolines, and the loader itself), which
   hardened runtime forbids unless allow-unsigned-executable-memory is granted. Library validation
   is disabled because PyInstaller collects dylibs from wheels built by other people: they are all
   signed by this build, but not by this Team ID, and library validation checks the signer rather
-  than the signature. Neither exception weakens anything a glucose widget touches — the app reads
-  one HTTPS endpoint and draws a number.
+  than the signature.
+
+  allow-jit is for Qt WebEngine's helper process (the Medtronic sign-in window is a small Chromium):
+  its JavaScript engine compiles code at run time, which on Apple silicon needs this entitlement.
+  The workflow signs that helper with this same file.
+
+  None of these weakens anything a glucose widget touches — the app reads a few HTTPS endpoints
+  and draws a number.
 -->
 <plist version="1.0">
 <dict>
+  <key>com.apple.security.cs.allow-jit</key><true/>
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
   <key>com.apple.security.cs.disable-library-validation</key><true/>
 </dict>

@@ -1,8 +1,12 @@
 ; Inno Setup 6 script — produces dist\GlucoPop-Setup-<version>.exe
-; Build: ISCC.exe build\installer.iss   (after PyInstaller produced dist\GlucoPop.exe)
+; Build: ISCC.exe /DAppVersion=x.y.z build\installer.iss   (after PyInstaller produced the dist\GlucoPop folder)
+; The workflow and build\build.bat pass the version from glucopop\config.py; the value below is
+; only a fallback for running ISCC by hand.
 
 #define AppName "GlucoPop"
-#define AppVersion "0.2.1"
+#ifndef AppVersion
+  #define AppVersion "0.3.0"
+#endif
 #define AppPublisher "Emre Kılıç · TypeHealthy"
 #define AppURL "https://github.com/emreukilic/glucopop"
 #define AppExe "GlucoPop.exe"
@@ -47,8 +51,13 @@ english.Launch=Launch GlucoPop now
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "autostart"; Description: "{cm:Autostart}"; GroupDescription: "{cm:AdditionalIcons}"
 
+[InstallDelete]
+; Since 0.3.0 the program is a folder (GlucoPop.exe beside _internal\) rather than one file. The
+; old libraries are cleared before the new ones go in, so nothing from an earlier version lingers.
+Type: filesandordirs; Name: "{app}\_internal"
+
 [Files]
-Source: "..\dist\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\{#AppName}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 
@@ -65,6 +74,8 @@ Filename: "{app}\{#AppExe}"; Description: "{cm:Launch}"; Flags: nowait postinsta
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\{#AppName}"
+; Qt's shader cache (the sign-in window draws with it); the program itself is under Programs\
+Type: filesandordirs; Name: "{localappdata}\{#AppName}"
 
 [Code]
 // GlucoPop lives in the tray with no visible window, so Windows' Restart Manager cannot

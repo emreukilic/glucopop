@@ -45,6 +45,9 @@ class CredentialForm(QWidget):
         self.fields: list[Field] = []
         self.ok = False
         self._thread: TestThread | None = None
+        # Medtronic: what signing in filled in (account, role, whom it follows) — never typed
+        self._cl: dict[str, str] | None = None
+        self._cl_patients: list[dict] = []
 
         self.form = QFormLayout()
         self.form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
@@ -69,6 +72,9 @@ class CredentialForm(QWidget):
         self.source_id = source_id
         self.ok = False
         self.status.setText("")
+        self.test_btn.setEnabled(True)
+        self._cl = None
+        self._cl_patients = []
         while self.form.rowCount():
             self.form.removeRow(0)
         self.inputs.clear()
@@ -107,6 +113,69 @@ class CredentialForm(QWidget):
         if source_id == "medtrum":
             self._medtrum_toggle()
             self.inputs["account_type"].currentIndexChanged.connect(self._medtrum_toggle)
+        if source_id == "carelink":
+            self._carelink_setup(values)
+
+    # ------------------------------------------------------------------ Medtronic
+    def _carelink_setup(self, values: dict[str, Any]) -> None:
+        """No username or password to type: signing in on Medtronic's page fills in the account,
+        whether it is the patient's own or a care partner's, and whom it follows."""
+        self._cl = {k: str(values.get(k) or "") for k in ("username", "role", "patient")}
+        self.cl_btn = QPushButton(tr("cl_login_again") if self._cl["username"] else tr("cl_login"))
+        self.cl_btn.clicked.connect(self._carelink_login)
+        self.cl_who = QLabel(tr("cl_signed_in", user=self._cl["username"]) if self._cl["username"] else "")
+        self.cl_who.setStyleSheet("color: palette(mid); font-size: 11px;")
+        self.cl_patient = QComboBox()
+        self.cl_patient.currentIndexChanged.connect(self._carelink_patient)
+        self.form.addRow("", self.cl_btn)
+        self.form.addRow("", self.cl_who)
+        self.form.addRow(tr("cl_patient"), self.cl_patient)
+        self._carelink_show_patients(False)
+        # the region is part of the sign-in: moving it undoes the sign-in
+        self.inputs["region"].currentIndexChanged.connect(self._carelink_region)
+        self.test_btn.setEnabled(bool(self._cl["username"]))
+
+    def _carelink_show_patients(self, show: bool) -> None:
+        self.cl_patient.setVisible(show)
+        lbl = self.form.labelForField(self.cl_patient)
+        if lbl:
+            lbl.setVisible(show)
+
+    def _carelink_login(self) -> None:
+        from .carelink_login import sign_in
+        who, err = sign_in(self.inputs["region"].currentData(), self)
+        if err:
+            self.status.setText("❌ " + err)
+            return
+        if not who:
+            return          # the window was closed: a change of mind, not an error
+        self._cl = {"username": who["username"], "role": who["role"], "patient": who["patients"][0]["username"]}
+        self._cl_patients = who["patients"]
+        self.cl_btn.setText(tr("cl_login_again"))
+        self.cl_who.setText(tr("cl_signed_in", user=who["username"]))
+        self.cl_patient.blockSignals(True)
+        self.cl_patient.clear()
+        for p in who["patients"]:
+            self.cl_patient.addItem(p["name"], p["username"])
+        self.cl_patient.blockSignals(False)
+        self._carelink_show_patients(who["role"] == "carepartner" and len(who["patients"]) > 1)
+        self.test_btn.setEnabled(True)
+        self._invalidate()
+        self.run_test()
+
+    def _carelink_patient(self, *_a) -> None:
+        if self._cl is not None and self.cl_patient.currentData():
+            self._cl["patient"] = self.cl_patient.currentData()
+            self._invalidate()
+            self.run_test()
+
+    def _carelink_region(self, *_a) -> None:
+        self._cl = {"username": "", "role": "", "patient": ""}
+        self._cl_patients = []
+        self.cl_btn.setText(tr("cl_login"))
+        self.cl_who.setText("")
+        self._carelink_show_patients(False)
+        self.test_btn.setEnabled(False)
 
     def _medtrum_toggle(self) -> None:
         is_follow = self.inputs["account_type"].currentData() == "follow"
@@ -128,6 +197,8 @@ class CredentialForm(QWidget):
         for f in self.fields:
             w = self.inputs[f.key]
             out[f.key] = w.currentData() if isinstance(w, QComboBox) else w.text().strip() if f.kind != "password" else w.text()
+        if self.source_id == "carelink" and self._cl is not None:
+            out.update(self._cl)
         return out
 
     def missing_required(self) -> list[str]:
@@ -415,9 +486,11 @@ class PeopleBox(QGroupBox):
 
     def apply(self) -> None:
         """Only touches the config when OK was pressed, so Cancel really cancels."""
-        for pid in self._removed:
-            self.cfg.remove(pid)
+        # Additions and edits first: removing a Medtronic row forgets its sign-in unless another
+        # row uses it, and a row just added with the same account has to be there to count.
         for p in self._people:
             self.cfg.upsert(p)
+        for pid in self._removed:
+            self.cfg.remove(pid)
         if not self.cfg.person(self.cfg.get("active_id", "")) and self.cfg.people:
             self.cfg.set_active(self.cfg.people[0]["id"])

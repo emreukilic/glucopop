@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 – 2026-09-24
+- New source, in beta: **Medtronic CareLink** (MiniMed 780G / 770G, Simplera), for the person's own account or a care partner's. There is no password to type into GlucoPop: Medtronic's own sign-in page opens in a GlucoPop window (an embedded browser with an off-the-record profile), and what is kept afterwards is the session Medtronic hands back, in the Windows Credential Manager like every other secret. A care partner who follows more than one person picks whom each row shows. Readings come with their true time (CareLink writes the patient's wall clock as if it were UTC; the offset is recovered from the message itself), Medtronic's arrows mapped to the usual ones, and Medtronic's own reason when there is no value (sensor warming up, pump and phone disconnected, Bluetooth off).
+- A Medtronic sign-in is saved only once a person who uses it is saved: a sign-in window closed with Cancel leaves nothing in the Credential Manager, and a sign-in goes when the last person using it is removed or moved to another account.
+- The Windows build is now a folder (GlucoPop.exe beside `_internal\`) instead of a single exe: the embedded browser is large, and a one-file build would unpack all of it on every start. The installer takes care of the switch; the portable version is now a zip (unzip, run GlucoPop.exe).
+- Fix: on a fresh install the list of people was the module's own default list, shared by every settings object made afterwards.
+- Build: the version is written in one place (`glucopop/config.py`); the exe's version resource and the installer take it from there. The exe's properties said 0.1.4 until now.
+
 ## 0.2.1 – 2026-09-19
 - Fix: a sensor still warming up is reported by Medtrum as a glucose of 0, not as no reading. Zero is below every low threshold, so GlucoPop showed 0 on the widget and classified it as an urgent low — a hypo alert, repeating on the fast five-minute schedule, for a sensor that had not started yet. Readings outside a plausible range (and readings with an implausible timestamp) are now treated as no reading at all, on every source. Found on a real sensor change.
 - Fix: an urgent low no longer stops being urgent the moment it goes stale. Staleness used to be decided before the glucose thresholds, so a dangerous low that was a minute past the stale limit lost its urgency and dropped to the slow repeat. It now keeps priority until twice the stale threshold, after which the staleness alert — the right one for a sensor that has actually stopped — takes over.

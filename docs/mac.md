@@ -78,6 +78,10 @@ sırayla dene:
 - [ ] Ayarlar → "Bilgisayarla başlat" açılıp kapanıyor; açıkken
       `~/Library/LaunchAgents/com.typehealthy.glucopop.plist` dosyası oluşuyor.
 - [ ] Uygulamayı kapatıp yeniden açınca hesap hatırlanıyor.
+- [ ] Ayarlar → Kişiler → Ekle → Medtronic → "Medtronic ile giriş yap": giriş penceresi açılıyor ve
+      Medtronic'in sayfası içinde görünüyor (boş/beyaz kalmıyor). Hesabın yoksa sayfanın açılması
+      yeter. Bu pencere gömülü bir Chromium (Qt WebEngine); imzalı derlemede ilk kez burada
+      denenmiş olacak, açılmazsa Console.app'te "QtWebEngineProcess" araması hata gösterir.
 
 Ekran görüntüsü al: menü çubuğundaki değer ve masaüstündeki widget. Site için lazım olacak.
 
@@ -86,10 +90,11 @@ Ekran görüntüsü al: menü çubuğundaki değer ve masaüstündeki widget. Si
 ## Yayınlamak
 
 Test tamamsa sürümü yükselt ve etiketle. `glucopop/config.py` ve `pyproject.toml` içindeki sürümü
-`0.3.0` yap, CHANGELOG'a macOS satırını ekle, commit'le, sonra:
+bir üst sürüme çıkar (0.3.0 Windows'ta Medtronic sürümü olarak çıktı; Mac için sıradaki, örneğin
+`0.3.1` ya da `0.4.0`), CHANGELOG'a macOS satırını ekle, commit'le, sonra (örnek 0.4.0 için):
 
-    git tag v0.3.0
-    git push origin v0.3.0
+    git tag v0.4.0
+    git push origin v0.4.0
 
 Etiket hem Windows hem Mac işini çalıştırır, ikisinin çıktısını aynı release'e koyar.
 Site `releases/latest/download/GlucoPop.dmg` adresine bakacak — sabit ad, bir daha

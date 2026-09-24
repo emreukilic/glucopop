@@ -21,11 +21,20 @@ def error_text(err: BaseException) -> str:
         msg = str(err)
         if msg == "llu_terms":
             return tr("e_llu_terms")
+        if msg == "carelink_login":
+            return tr("e_carelink_login")
         return tr("e_auth") + (f" ({msg})" if msg and msg not in ("invalid_credentials", "Unauthorized") else "")
     if isinstance(err, SourceError):
         msg = str(err)
+        # Medtronic says why it has nothing to show; its words beat a generic guess
+        if msg.startswith("carelink_status:"):
+            key = {"WARM_UP": "e_cl_warmup", "SENSOR_OFF": "e_cl_sensor_off", "LOST_PUMP_SIGNAL": "e_cl_pump",
+                   "BLUETOOTH_OFF": "e_cl_bluetooth"}.get(msg.split(":", 1)[1], "e_no_data")
+            return tr(key)
         key = {"no_data": "e_no_data", "libre_no_connection": "e_libre_no_connection",
-               "medtrum_no_follow": "e_medtrum_no_follow", "rate_limited": "e_rate_limited"}.get(msg)
+               "medtrum_no_follow": "e_medtrum_no_follow", "rate_limited": "e_rate_limited",
+               "carelink_no_patient": "e_carelink_no_patient", "carelink_unsupported": "e_carelink_unsupported",
+               "carelink_forbidden": "e_carelink_forbidden"}.get(msg)
         return tr(key) if key else msg
     if isinstance(err, requests.exceptions.SSLError):
         return tr("e_ssl")

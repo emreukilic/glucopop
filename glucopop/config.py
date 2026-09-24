@@ -10,6 +10,7 @@ do not overwrite each other's password — which is exactly what the single-acco
 
 from __future__ import annotations
 
+import copy
 import json
 import os
 import sys
@@ -18,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 APP_NAME = "GlucoPop"
-VERSION = "0.2.1"
+VERSION = "0.3.0"
 BUNDLE_ID = "com.typehealthy.glucopop"   # macOS bundle and LaunchAgent label
 REPO = "emreukilic/glucopop"
 AUTHOR = "Emre Kılıç"
@@ -122,9 +123,19 @@ def new_person(source: str = "", cfg: dict | None = None, name: str = "") -> dic
             "cfg": dict(cfg or {}), "alerts": True}
 
 
+def carelink_key(p: dict[str, Any] | None) -> str | None:
+    """The Medtronic sign-in a person's row reads through, if it has one."""
+    if not p or p.get("source") != "carelink" or not (p.get("cfg") or {}).get("username"):
+        return None
+    from .sources.carelink import vault_key  # local: config must stay importable without the sources package
+    return vault_key(p["cfg"].get("region"), p["cfg"]["username"])
+
+
 class Config:
     def __init__(self) -> None:
-        self.data: dict[str, Any] = dict(DEFAULTS)
+        # a deep copy: a shallow one shared DEFAULTS' own `people` list, so on a fresh install every
+        # person added went into the module-level defaults, and into the next Config made
+        self.data: dict[str, Any] = copy.deepcopy(DEFAULTS)
         self.load()
 
     # ----------------------------------------------------------------- people access
@@ -143,21 +154,42 @@ class Config:
             self.data["active_id"] = pid
 
     def upsert(self, person: dict[str, Any]) -> None:
+        replaced = None
         for i, p in enumerate(self.people):
             if p["id"] == person["id"]:
+                replaced = p
                 self.people[i] = person
                 break
         else:
             self.people.append(person)
         if not self.data.get("active_id"):
             self.data["active_id"] = person["id"]
+        # signed in to another Medtronic account, or moved to another service: the old sign-in
+        # goes, unless someone else still reads through it. (A row edited in place cannot be
+        # compared with itself — callers pass a new dict, as the dialogs and the wizard do.)
+        if replaced is not None and replaced is not person:
+            self._retire_carelink(carelink_key(replaced))
 
     def remove(self, pid: str) -> None:
+        leaving = self.person(pid)
         for k in SECRET_KEYS:
             delete_secret(pid, k)
         self.data["people"] = [p for p in self.people if p["id"] != pid]
         if self.data.get("active_id") == pid:
             self.data["active_id"] = self.people[0]["id"] if self.people else ""
+        self._retire_carelink(carelink_key(leaving))
+
+    def carelink_keys(self) -> set[str]:
+        return {k for k in (carelink_key(p) for p in self.people) if k}
+
+    def _retire_carelink(self, key: str | None) -> None:
+        """A Medtronic sign-in can serve several people (one care-partner account, two children);
+        it goes with the last row that uses it — from memory and from the Credential Manager."""
+        if not key or key in self.carelink_keys():
+            return
+        from .sources.carelink import KeyringVault, forget_tokens  # local: see carelink_key
+        forget_tokens(key)
+        KeyringVault().forget(key)
 
     def person_name(self, p: dict[str, Any]) -> str:
         """What to call someone in the widget: their own name, else whatever the service knows."""
@@ -227,6 +259,11 @@ class Config:
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(out, f, indent=2, ensure_ascii=False)
         os.replace(tmp, CONFIG_PATH)
+        # A Medtronic sign-in is kept in memory until the row that uses it is on disk; now it is.
+        keys = self.carelink_keys()
+        if keys:
+            from .sources.carelink import persist_pending  # local: see carelink_key
+            persist_pending(keys)
 
     # ----------------------------------------------------------------- dict-ish access
     def __getitem__(self, k: str) -> Any:

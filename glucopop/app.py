@@ -96,8 +96,9 @@ class GlucoPopApp:
                 person = new_person()
                 self.cfg.upsert(person)
                 self.cfg.set_active(person["id"])
-            person["source"] = self.cfg["source"]
-            person["cfg"] = dict(self.cfg["source_cfg"])
+            # a new dict rather than an edit in place, so upsert can see what the row was before
+            # (a Medtronic sign-in nobody reads through any more is forgotten there)
+            person = {**person, "source": self.cfg["source"], "cfg": dict(self.cfg["source_cfg"])}
             self.cfg.upsert(person)
             self.cfg.save()
             from .config import set_autostart
@@ -482,6 +483,9 @@ def main() -> int:
     QApplication.setApplicationName("GlucoPop")
     QApplication.setOrganizationName("GlucoPop")
     QApplication.setQuitOnLastWindowClosed(False)
+    # Qt WebEngine (the Medtronic sign-in window) is loaded only when it is needed, long after
+    # start-up, and asks for this to have been set before the application object existed.
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setWindowIcon(make_icon("G", QColor("#3ec26b")))

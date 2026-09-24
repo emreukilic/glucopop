@@ -7,6 +7,7 @@ import time
 from typing import Any
 
 from .base import AuthError, Field, Reading, Source, SourceError
+from .carelink import CareLink
 from .dexcom import DexcomShare
 from .libre import LibreLinkUp
 from .medtrum import MedtrumEasyView
@@ -16,14 +17,16 @@ SOURCES: dict[str, type[Source]] = {
     DexcomShare.id: DexcomShare,
     LibreLinkUp.id: LibreLinkUp,
     MedtrumEasyView.id: MedtrumEasyView,
+    CareLink.id: CareLink,
     Nightscout.id: Nightscout,
 }
 
-# Which sensors each source covers (for the picker UI). i18n keys.
+# Which sensors each source covers (for the picker UI). i18n keys. The order is the picker's.
 SOURCE_INFO = {
     "dexcom": {"title": "Dexcom", "sub": "src_sub_dexcom", "desc": "src_desc_dexcom"},
     "libre": {"title": "FreeStyle Libre", "sub": "src_sub_libre", "desc": "src_desc_libre"},
     "medtrum": {"title": "Medtrum", "sub": "src_sub_medtrum", "desc": "src_desc_medtrum"},
+    "carelink": {"title": "Medtronic", "sub": "src_sub_carelink", "desc": "src_desc_carelink"},
     "nightscout": {"title": "Nightscout / xDrip+", "sub": "src_sub_ns", "desc": "src_desc_ns"},
 }
 
