@@ -50,6 +50,8 @@ Medtronic kaynağı yeni. Medtronic hesabında iki adımlı doğrulama açıksa 
 ### Önemli
 
 * **Tıbbi cihaz değildir.** Değerler resmi uygulamadan gecikmeli gelebilir; tedavi kararından önce mutlaka resmi uygulamayı/cihazı kontrol et.
+* **Resmi bir uygulama değildir.** GlucoPop; Dexcom, Abbott, Medtrum, Medtronic, Nightscout projesi ya da başka bir sensör üreticisiyle bağlantılı değildir, onlar tarafından onaylanmamış ve desteklenmemektedir. Ürün ve marka adları sahiplerine aittir; burada yalnızca hangi sensörlerle çalıştığını belirtmek için geçer.
+* GlucoPop'un uyarıları, sensörün resmi uygulamasındaki alarmların yerine geçmez; resmi uygulamanın alarmlarını açık tut. Uyarı gelmemesi her şeyin yolunda olduğu anlamına gelmez.
 * Kullanılan servislerin resmi bir API'si yoktur; uygulamaların kendi uç noktaları kullanılır (Nightscout / Home Assistant topluluğuyla aynı yöntem). Üretici tarafında değişiklik olursa bir kaynak geçici olarak çalışmayabilir; sorunları *Issues*'a yaz.
 
 ---
@@ -65,6 +67,8 @@ Medtronic kaynağı yeni. Medtronic hesabında iki adımlı doğrulama açıksa 
 **Develop:** `dev.bat` runs from source, `dev.bat check` tests the saved connection in a terminal, `build\build.bat` produces the `dist\GlucoPop\` folder and the installer. Tagging `v*` builds and publishes both via GitHub Actions.
 
 **Not a medical device.** Always confirm with your official app or meter before treating.
+
+**Not an official app.** GlucoPop is not affiliated with, endorsed or supported by Dexcom, Abbott, Medtrum, Medtronic, the Nightscout project or any other sensor maker. Product names and trademarks belong to their owners and appear here only to say which sensors GlucoPop works with. GlucoPop's alerts do not replace the alarms in your sensor's official app; keep those on, and don't take a missing alert to mean all is well.
 
 ### Credits
 Endpoint knowledge comes from the community: [pydexcom](https://github.com/gagebenne/pydexcom), [libre-link-unofficial-api](https://github.com/DRFR0ST/libre-link-unofficial-api), [sapk/medtrum-easyview](https://github.com/sapk/medtrum-easyview), [nl-ruud/nightscout-easyview](https://github.com/nl-ruud/nightscout-easyview), [Nightscout](https://nightscout.github.io/). Medtronic CareLink: the protocol as the open-source community around [xDrip+](https://github.com/NightscoutFoundation/xDrip), the Nightscout bridges and the Home Assistant CareLink integration has documented it; GlucoPop's code for it is its own.
